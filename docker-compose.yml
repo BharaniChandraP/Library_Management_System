@@ -1,3 +1,45 @@
+# services:
+#   db:
+#     image: postgres:15-alpine
+#     restart: always
+#     environment:
+#       POSTGRES_USER: bharani
+#       POSTGRES_PASSWORD: password123
+#       POSTGRES_DB: inventory_db
+#     ports:
+#       - "5432:5432"
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+
+#   backend:
+#     build: ./inventory-service
+#     ports:
+#       - "5001:5001"
+#     environment:
+#       DB_USER: bharani
+#       DB_PASSWORD: password123
+#       DB_HOST: db
+#       DB_NAME: inventory_db
+#       DB_PORT: 5432
+#     depends_on:
+#       - db
+
+#   frontend:
+#     build: ./library-frontend
+#     ports:
+#       - "3000:3000"
+#     stdin_open: true # Required for React to keep running in Docker
+#     tty: true
+#     depends_on:
+#       - backend
+
+# volumes:
+#   postgres_data:
+
+
+
+
+
 services:
   db:
     image: postgres:15-alpine
@@ -10,12 +52,15 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - library-net
 
-  backend:
-    build: ./inventory-service
+  # 1. VIEW SERVICE (Handles GET)
+  view-service:
+    build: ./service-view
     ports:
-      - "5001:5001"
-    environment:
+      - "5004:5004"
+    environment: &db-env
       DB_USER: bharani
       DB_PASSWORD: password123
       DB_HOST: db
@@ -23,15 +68,59 @@ services:
       DB_PORT: 5432
     depends_on:
       - db
+    networks:
+      - library-net
+
+  # 2. ADD SERVICE (Handles POST)
+  add-service:
+    build: ./service-add
+    ports:
+      - "5001:5001"
+    environment: *db-env
+    depends_on:
+      - db
+    networks:
+      - library-net
+
+  # 3. DELETE SERVICE (Handles DELETE)
+  delete-service:
+    build: ./service-delete
+    ports:
+      - "5002:5002"
+    environment: *db-env
+    depends_on:
+      - db
+    networks:
+      - library-net
+
+  # 4. TRANSACTION SERVICE (Handles Issue/Return)
+  transaction-service:
+    build: ./service-issue-return
+    ports:
+      - "5003:5003"
+    environment: *db-env
+    depends_on:
+      - db
+    networks:
+      - library-net
 
   frontend:
     build: ./library-frontend
     ports:
       - "3000:3000"
-    stdin_open: true # Required for React to keep running in Docker
+    stdin_open: true
     tty: true
     depends_on:
-      - backend
+      - view-service
+      - add-service
+      - delete-service
+      - transaction-service
+    networks:
+      - library-net
+
+networks:
+  library-net:
+    driver: bridge
 
 volumes:
   postgres_data:
