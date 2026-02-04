@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: bharani
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: inventory_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./inventory-service
+    ports:
+      - "5001:5001"
+    environment:
+      DB_USER: bharani
+      DB_PASSWORD: password123
+      DB_HOST: db
+      DB_NAME: inventory_db
+      DB_PORT: 5432
+    depends_on:
+      - db
+
+  frontend:
+    build: ./library-frontend
+    ports:
+      - "3000:3000"
+    stdin_open: true # Required for React to keep running in Docker
+    tty: true
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
