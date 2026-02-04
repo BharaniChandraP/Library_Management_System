@@ -1,3 +1,4 @@
+
 # services:
 #   db:
 #     image: postgres:15-alpine
@@ -10,12 +11,15 @@
 #       - "5432:5432"
 #     volumes:
 #       - postgres_data:/var/lib/postgresql/data
+#     networks:
+#       - library-net
 
-#   backend:
-#     build: ./inventory-service
+#   # 1. VIEW SERVICE (Handles GET)
+#   view-service:
+#     build: ./service-view
 #     ports:
-#       - "5001:5001"
-#     environment:
+#       - "5004:5004"
+#     environment: &db-env
 #       DB_USER: bharani
 #       DB_PASSWORD: password123
 #       DB_HOST: db
@@ -23,20 +27,62 @@
 #       DB_PORT: 5432
 #     depends_on:
 #       - db
+#     networks:
+#       - library-net
+
+#   # 2. ADD SERVICE (Handles POST)
+#   add-service:
+#     build: ./service-add
+#     ports:
+#       - "5001:5001"
+#     environment: *db-env
+#     depends_on:
+#       - db
+#     networks:
+#       - library-net
+
+#   # 3. DELETE SERVICE (Handles DELETE)
+#   delete-service:
+#     build: ./service-delete
+#     ports:
+#       - "5002:5002"
+#     environment: *db-env
+#     depends_on:
+#       - db
+#     networks:
+#       - library-net
+
+#   # 4. TRANSACTION SERVICE (Handles Issue/Return)
+#   transaction-service:
+#     build: ./service-issue-return
+#     ports:
+#       - "5003:5003"
+#     environment: *db-env
+#     depends_on:
+#       - db
+#     networks:
+#       - library-net
 
 #   frontend:
 #     build: ./library-frontend
 #     ports:
 #       - "3000:3000"
-#     stdin_open: true # Required for React to keep running in Docker
+#     stdin_open: true
 #     tty: true
 #     depends_on:
-#       - backend
+#       - view-service
+#       - add-service
+#       - delete-service
+#       - transaction-service
+#     networks:
+#       - library-net
+
+# networks:
+#   library-net:
+#     driver: bridge
 
 # volumes:
 #   postgres_data:
-
-
 
 
 
@@ -55,9 +101,9 @@ services:
     networks:
       - library-net
 
-  # 1. VIEW SERVICE (Handles GET)
+  # 1. VIEW SERVICE
   view-service:
-    build: ./service-view
+    image: bharanichandra/library-view-service:latest
     ports:
       - "5004:5004"
     environment: &db-env
@@ -71,9 +117,9 @@ services:
     networks:
       - library-net
 
-  # 2. ADD SERVICE (Handles POST)
+  # 2. ADD SERVICE
   add-service:
-    build: ./service-add
+    image: bharanichandra/library-add-service:latest
     ports:
       - "5001:5001"
     environment: *db-env
@@ -82,9 +128,9 @@ services:
     networks:
       - library-net
 
-  # 3. DELETE SERVICE (Handles DELETE)
+  # 3. DELETE SERVICE
   delete-service:
-    build: ./service-delete
+    image: bharanichandra/library-delete-service:latest
     ports:
       - "5002:5002"
     environment: *db-env
@@ -93,9 +139,9 @@ services:
     networks:
       - library-net
 
-  # 4. TRANSACTION SERVICE (Handles Issue/Return)
+  # 4. TRANSACTION SERVICE
   transaction-service:
-    build: ./service-issue-return
+    image: bharanichandra/library-transaction-service:latest
     ports:
       - "5003:5003"
     environment: *db-env
@@ -105,7 +151,7 @@ services:
       - library-net
 
   frontend:
-    build: ./library-frontend
+    image: bharanichandra/library-frontend:latest
     ports:
       - "3000:3000"
     stdin_open: true

@@ -1,8 +1,8 @@
-name: CI/CD to Docker Hub
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main" ] 
 
 jobs:
   build-and-push:
@@ -17,37 +17,21 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build & Push Add Service
-        uses: docker/build-push-action@v5
-        with:
-          context: ./service-add
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/library-add-service:latest
-
-      - name: Build & Push View Service
-        uses: docker/build-push-action@v5
-        with:
-          context: ./service-view
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/library-view-service:latest
-
-      - name: Build & Push Delete Service
-        uses: docker/build-push-action@v5
-        with:
-          context: ./service-delete
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/library-delete-service:latest
-
-      - name: Build & Push Transaction Service
-        uses: docker/build-push-action@v5
-        with:
-          context: ./service-transaction
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/library-transaction-service:latest
-
-      - name: Build & Push Frontend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./library-frontend
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/library-frontend:latest
+      - name: Build and Push All Services
+        run: |
+          # Define your service folders and their target image names
+          # Note the correct name for the transaction service folder
+          services=("service-add" "service-view" "service-delete" "service-issue-return" "library-frontend")
+          
+          for service in "${services[@]}"; do
+            # Map 'service-issue-return' folder to 'library-transaction-service' image name
+            if [ "$service" == "service-issue-return" ]; then
+              IMAGE_NAME="library-transaction-service"
+            else
+              IMAGE_NAME="library-${service#service-}"
+            fi
+            
+            echo "Building $IMAGE_NAME from folder $service..."
+            docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:latest ./$service
+            docker push ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:latest
+          done
